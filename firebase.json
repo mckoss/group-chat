@@ -1,0 +1,8 @@
+{
+  "database": {
+    "rules": "group-chat.bolt"
+  },
+  "hosting": {
+    "public": "app"
+  }
+}

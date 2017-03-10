@@ -1,0 +1,11 @@
+path /users/{uid} is User {
+  read() { isUser(uid) }
+  create() { isUser(uid) }
+  update() { isUser(uid) }
+}
+
+type User {
+  nickname: String;
+}
+
+function isUser(uid) { auth != null && auth.uid == uid }

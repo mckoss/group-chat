@@ -1,0 +1,15 @@
+{
+  "name": "group-chat",
+  "version": "0.1.0",
+  "description": "Firebase Group Chat Sample Application",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mckoss/group-chat"
+  },
+  "author": "Mike Koss <mike@mckoss.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "firebase-bolt": "^0.8.2",
+    "firebase-tools": "^3.5.0"
+  }
+}
