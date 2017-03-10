@@ -31,20 +31,10 @@ $ cd group-chat
 In order to keep this app as simple as possible, it is built as a collection of
 simple single-page applications w/o the use of any JavaScript frameworks.
 
-To install the firebase command line tools just for use in this repo (this
-installs firebase-tools inside a node_modules sub-directory of this repo, and
-then sets your PATH to include it):
-
 ```
 $ source tools/use
 $ configure-project
-```
-
-Alternatively, install firbase-tools manually (for use globally in any
-directory on your machine):
-
-```
-$ npm install --global firebase-tools firebase-bolt
+$ build-project
 ```
 
 Make sure firebase is setup correctly:

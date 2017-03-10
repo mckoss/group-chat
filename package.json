@@ -9,7 +9,10 @@
   "author": "Mike Koss <mike@mckoss.com>",
   "license": "MIT",
   "devDependencies": {
+    "firebase": "^3.7.1",
     "firebase-bolt": "^0.8.2",
-    "firebase-tools": "^3.5.0"
+    "firebase-tools": "^3.5.0",
+    "tslint": "^4.5.1",
+    "typescript": "^2.2.1"
   }
 }
