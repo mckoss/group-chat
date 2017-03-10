@@ -1,0 +1,9 @@
+#!/bin/bash
+# build-project --- Build the project from sources.
+set -e
+export TOOLS_DIR="$(unset CDPATH; cd $(dirname ${BASH_SOURCE[0]}) && pwd)"
+source $TOOLS_DIR/use
+
+cd $PROJ_DIR
+
+firebase serve
