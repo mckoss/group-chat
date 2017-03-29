@@ -12,6 +12,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "src/**/*.tsx",
     "node_modules/firebase/firebase.d.ts"
   ],
   "exclude": [

@@ -3,3 +3,4 @@
 app/app.js
 app/app.js.map
 /lib/
+/firebase-debug.log

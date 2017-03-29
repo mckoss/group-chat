@@ -12,6 +12,6 @@ tslint --format=verbose src/*.ts
 rm -rf lib
 
 echo -e "Compiling TypeScript files ..."
-tsc
+tsc --jsx react
 
 browserify lib/index.js --debug --outfile app/app.js
