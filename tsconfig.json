@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
-    "module": "amd",
-    "outFile": "app/app.js",
+    "module": "commonjs",
     "target": "es5",
+    "outDir": "lib",
+    "lib": ["es2015", "dom"],
+    "rootDir": "src",
     "noImplicitAny": true,
     "strictNullChecks": true,
     "sourceMap": true,
@@ -11,5 +13,8 @@
   "include": [
     "src/**/*.ts",
     "node_modules/firebase/firebase.d.ts"
+  ],
+  "exclude": [
+    "lib"
   ]
 }

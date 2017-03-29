@@ -13,3 +13,5 @@ rm -rf lib
 
 echo -e "Compiling TypeScript files ..."
 tsc
+
+browserify lib/index.js --debug --outfile app/app.js
