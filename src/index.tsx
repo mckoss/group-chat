@@ -1,27 +1,21 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-import { Room } from './chat-model';
-import { MessageEl, RoomEl } from './chat';
+import { Room, App } from './chat';
+import { AppEl } from './chat-elems';
 
-import { config } from './config';
 
 window.addEventListener('load', init);
 
-let app: firebase.app.App;
-
 function init() {
-  console.log("Application startup ...");
+  let app = new App();
+  let sample = app.createRoom("Example room");
 
-  let sample = new Room("Example room");
   sample.add({from: "Mike", when: 123, message: "Hello, world!"});
   sample.add({from: "Deb", when: 124, message: "Hi, back."});
 
   ReactDOM.render(
-      <RoomEl {...sample} />,
-      document.getElementById('room')
+      <AppEl {...app} />,
+      document.getElementById('app')
   );
-
-  app = firebase.initializeApp(config);
-  console.log(app);
 }

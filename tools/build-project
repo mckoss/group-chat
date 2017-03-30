@@ -6,12 +6,13 @@ source $TOOLS_DIR/use
 
 cd $PROJ_DIR
 
+rm -rf lib
+
 echo "Linting sources ..."
 tslint --format=verbose src/*.ts
 
-rm -rf lib
-
-echo -e "Compiling TypeScript files ..."
+echo "Compiling TypeScript files ..."
 tsc --jsx react
 
+echo -e "\nBundling javascript ..."
 browserify lib/index.js --debug --outfile app/app.js
