@@ -6,7 +6,10 @@ export class AppEl extends React.Component<App, undefined> {
   render() {
     return (
       <div className="app">
-        <RoomEl {...this.props.current} />
+        {this.props.currentRoom ?
+         <RoomEl {...this.props.currentRoom} /> :
+         <div>No current room!</div>
+        }
       </div>
     );
   }
