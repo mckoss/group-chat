@@ -2,12 +2,12 @@ import * as React from 'react';
 
 import { App, Room, Message } from './chat';
 
-export class AppEl extends React.Component<App, undefined> {
+export class AppEl extends React.Component<{app: App}, undefined> {
   render() {
     return (
       <div className="app">
-        {this.props.currentRoom ?
-         <RoomEl {...this.props.currentRoom} /> :
+        {this.props.app.currentRoom ?
+         <RoomEl {...this.props.app.currentRoom} /> :
          <div>No current room!</div>
         }
       </div>

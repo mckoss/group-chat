@@ -23,36 +23,34 @@ export class Message {
 //
 // Implementation of Application using Firebase.
 //
-export class AppImpl {
-  private app: App;
+export class AppOnFirebase implements App {
+  rooms: Room[] = [];
+  currentRoom: Room | null = null;
+
   private fbApp: firebase.app.App;
 
   constructor() {
     console.log("Application startup ...");
-    this.fbApp = firebase.initializeApp(config);
-    this.app = {
-      rooms: [],
-      currentRoom: null
-    };
-  }
-
-  get props(): App {
-    return this.app;
+    if (typeof firebase === 'undefined') {
+      console.error("Firebase script not loaded - offline?");
+    } else {
+      this.fbApp = firebase.initializeApp(config);
+    }
   }
 
   createRoom(name: string): Room {
-    this.app.currentRoom = {
+    this.currentRoom = {
       name: name,
       messages: [],
     };
 
-    this.app.rooms.push(this.app.currentRoom);
-    return this.app.currentRoom;
+    this.rooms.push(this.currentRoom);
+    return this.currentRoom;
   }
 
   addMessage(message: Message) {
-    if (this.app.currentRoom) {
-      this.app.currentRoom.messages.push(message);
+    if (this.currentRoom) {
+      this.currentRoom.messages.push(message);
     }
   }
 }
