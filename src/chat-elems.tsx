@@ -7,7 +7,7 @@ export class AppEl extends React.Component<{app: App}, undefined> {
     return (
       <div className="app">
         {this.props.app.currentRoom ?
-         <RoomEl {...this.props.app.currentRoom} /> :
+         <RoomEl room={this.props.app.currentRoom} /> :
          <div>No current room!</div>
         }
       </div>
@@ -15,16 +15,26 @@ export class AppEl extends React.Component<{app: App}, undefined> {
   }
 }
 
-export class RoomEl extends React.Component<Room, undefined> {
+export class RoomEl
+extends React.Component<{room:Room}, undefined> {
   render() {
     let key = 0;
     return (
       <div className="room">
-        <h1>{this.props.name}</h1>
-        {this.props.messages.map((message) => {
+        <h1>{this.props.room.name}</h1>
+        {this.props.room.messages.map((message) => {
           return <MessageEl key={key++} {...message} />;
         })}
+        <input id="message" type="text" />
+        <input type="button" value="Send" onClick={() => this.doClick()}/>
       </div>);
+  }
+
+  doClick() {
+    this.props.room.addMessage({
+      from: "mike",
+      when: 123,
+      message: this.refs.message.value});
   }
 }
 

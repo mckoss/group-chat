@@ -1,20 +1,21 @@
 import { config } from './config';
 
 //
-// Plain Javascript objects define the types for props that can be used in
-// React components.
+// The <App> UI is bound to a property which implements this interface.
 //
-export class App {
+export interface App {
   rooms: Room[];
   currentRoom: Room | null;
 }
 
-export class Room {
+export interface Room {
   name: string;
   messages: Message[];
+
+  addMessage: (message: Message) => void;
 }
 
-export class Message {
+export interface Message {
   from: string;
   when: number;
   message: string;
@@ -39,18 +40,20 @@ export class AppOnFirebase implements App {
   }
 
   createRoom(name: string): Room {
-    this.currentRoom = {
-      name: name,
-      messages: [],
-    };
+    let room = new RoomImpl(name);
 
-    this.rooms.push(this.currentRoom);
-    return this.currentRoom;
+    this.rooms.push(room);
+    this.currentRoom = room;
+    return room;
   }
+}
+
+export class RoomImpl implements Room {
+  messages: Message[] = [];
+
+  constructor(public name: string) {/*_*/}
 
   addMessage(message: Message) {
-    if (this.currentRoom) {
-      this.currentRoom.messages.push(message);
-    }
+    this.messages.push(message);
   }
 }
