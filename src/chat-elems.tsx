@@ -28,7 +28,7 @@ export class AppEl extends React.Component<{app: App}, AppState> {
     return (
       <div className="app">
         <h2>Rooms:</h2>
-        <ul>
+        <ul className="room-list">
           {this.state.rooms.map((room) => {
             return (<li key={room.name}
                     className={this.state.currentRoom === room ? 'selected' : ''}
