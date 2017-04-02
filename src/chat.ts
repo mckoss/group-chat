@@ -11,6 +11,7 @@ export interface AppState {
 
 export interface App extends Listenable<AppState> {
   createRoom: ((name: string) => Room);
+  selectRoom: (room: Room) => void;
 }
 
 export interface Room {
@@ -71,6 +72,12 @@ export class AppOnFirebase implements App {
           this.listener(this.state);
         }
       });
+  }
+
+  selectRoom(room: Room) {
+    console.log('select', room.name);
+    this.state.currentRoom = room;
+    this.updateListeners();
   }
 
   createRoom(name: string): Room {

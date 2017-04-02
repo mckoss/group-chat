@@ -27,9 +27,25 @@ export class AppEl extends React.Component<{app: App}, AppState> {
   render() {
     return (
       <div className="app">
+        <h2>Rooms:</h2>
+        <ul>
+          {this.state.rooms.map((room) => {
+            return (<li key={room.name}
+                    className={this.state.currentRoom === room ? 'selected' : ''}
+                        onClick={() => this.props.app.selectRoom(room)}>
+                      {room.name}
+                    </li>);
+          })}
+        </ul>
+
+        <InputEl onSubmit={(value) => this.props.app.createRoom(value)}
+                 placeholder="Room name to create ..." />
+
+        <hr />
+
         {this.state.currentRoom ?
          <RoomEl room={this.state.currentRoom} /> :
-         <div>No current room!</div>
+         <div>No selected room.</div>
         }
       </div>
     );
@@ -46,7 +62,9 @@ extends React.Component<{room:Room}, undefined> {
         {this.props.room.messages.map((message) => {
           return <MessageEl key={key++} {...message} />;
         })}
-        <InputEl onSubmit={(value) => this.props.room.sendMessage(value)} />
+        <InputEl onSubmit={(value) => this.props.room.sendMessage(value)}
+                 size={64}
+                 placeholder="Enter message ..." />
       </div>);
   }
 }
@@ -67,6 +85,7 @@ export class MessageEl extends React.Component<Message, undefined> {
 interface InputProps {
   enterText?: string;
   placeholder?: string;
+  size?: number;
   onSubmit: (text: string) => void;
 }
 
@@ -97,9 +116,12 @@ class InputEl extends React.Component<InputProps, {value: string}> {
 
     return (
       <form onSubmit={handleSubmit}>
-        <input placeholder={this.props.placeholder || ''}
+        <input type="text"
+               size={this.props.size || 32}
+               placeholder={this.props.placeholder || ''}
                onChange={handleChange}
                value={this.state.value} />
+        &nbsp;
         <button>{this.props.enterText || 'OK'}</button>
       </form>
     );

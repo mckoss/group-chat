@@ -9,11 +9,6 @@ window.addEventListener('load', init);
 
 function init() {
   let app = new AppOnFirebase();
-  let room = app.createRoom("Example room");
-
-  room.sendMessage("Hello, world!");
-  room.sendMessage("Hi, back.");
-  room.sendMessage("Hello, again!");
 
   ReactDOM.render(
       <AppEl app={app} />,

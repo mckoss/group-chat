@@ -1,0 +1,39 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: 100%;
+  background: #ebebeb url("/images/gradient.jpg") repeat-x left top;
+}
+
+div { padding:0; margin:0; }
+p { margin: 0 0 8px 0; line-height: 140%; }
+h1, h2, h3, h4, h5 { margin: 5px 0; }
+a { color: #444; }
+a:visited { color: #888; }
+a:hover { color: #000; }
+li { line-height: 120%; margin-bottom: 8px; }
+
+#page { width: 90%; margin: auto; }
+
+#page-heading {
+  border-bottom: 2px solid black;
+  padding-bottom: 4px;
+  position: relative;
+  width: 100%;
+}
+
+span.menu-bar {
+  position: absolute;
+  display: block;
+  bottom: 3px;
+  right: 0;
+  color: gray;
+  font-size: 0.5em;
+  text-align: right;
+}
+
+/* Room List */
+li.selected {
+  font-weight: bold;
+}
