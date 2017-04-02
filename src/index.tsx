@@ -11,9 +11,9 @@ function init() {
   let app = new AppOnFirebase();
   let room = app.createRoom("Example room");
 
-  room.addMessage({from: "Mike", when: 123, message: "Hello, world!"});
-  room.addMessage({from: "Deb", when: 124, message: "Hi, back."});
-  room.addMessage({from: "Mike", when: 123, message: "Hello, again!"});
+  room.sendMessage("Hello, world!");
+  room.sendMessage("Hi, back.");
+  room.sendMessage("Hello, again!");
 
   ReactDOM.render(
       <AppEl app={app} />,

@@ -1,18 +1,23 @@
 import { config } from './config';
+import { Listen, Listenable, Listener, Unlisten } from './listen';
 
 //
 // The <App> UI is bound to a property which implements this interface.
 //
-export interface App {
+export interface AppState {
   rooms: Room[];
   currentRoom: Room | null;
+}
+
+export interface App extends Listenable<AppState> {
+  createRoom: ((name: string) => Room);
 }
 
 export interface Room {
   name: string;
   messages: Message[];
 
-  addMessage: (message: Message) => void;
+  sendMessage: (message: string) => void;
 }
 
 export interface Message {
@@ -25,10 +30,12 @@ export interface Message {
 // Implementation of Application using Firebase.
 //
 export class AppOnFirebase implements App {
-  rooms: Room[] = [];
-  currentRoom: Room | null = null;
+  state: AppState;
+  uid: string;
+  listener: Listener<AppState>;
 
   private fbApp: firebase.app.App;
+  private pendingUpdate = false;
 
   constructor() {
     console.log("Application startup ...");
@@ -37,13 +44,43 @@ export class AppOnFirebase implements App {
     } else {
       this.fbApp = firebase.initializeApp(config);
     }
+    this.uid = 'mike';
+    this.state = {
+      rooms: [],
+      currentRoom: null
+    };
+  }
+
+  listen(listener: Listener<AppState>): Unlisten {
+    this.listener = listener;
+    this.updateListeners();
+    return (() => {
+      delete this.listener;
+    });
+  }
+
+  updateListeners() {
+    if (this.pendingUpdate) {
+      return;
+    }
+    this.pendingUpdate = true;
+    Promise.resolve()
+      .then(() => {
+        this.pendingUpdate = false;
+        if (this.listener) {
+          this.listener(this.state);
+        }
+      });
   }
 
   createRoom(name: string): Room {
-    let room = new RoomImpl(name);
+    let room = new RoomImpl(this, name);
 
-    this.rooms.push(room);
-    this.currentRoom = room;
+    this.state.rooms.push(room);
+    this.state.currentRoom = room;
+
+    this.updateListeners();
+
     return room;
   }
 }
@@ -51,9 +88,15 @@ export class AppOnFirebase implements App {
 export class RoomImpl implements Room {
   messages: Message[] = [];
 
-  constructor(public name: string) {/*_*/}
+  constructor(private app: AppOnFirebase,
+              public name: string) {/*_*/}
 
-  addMessage(message: Message) {
-    this.messages.push(message);
+  sendMessage(message: string) {
+    this.messages.push({
+      from: this.app.uid,
+      when: Date.now(),
+      message: message
+    });
+    this.app.updateListeners();
   }
 }

@@ -1,13 +1,34 @@
 import * as React from 'react';
 
-import { App, Room, Message } from './chat';
+import { Unlisten } from './listen';
+import { App, AppState, Room, Message } from './chat';
 
-export class AppEl extends React.Component<{app: App}, undefined> {
+export class AppEl extends React.Component<{app: App}, AppState> {
+  unlisten: Unlisten;
+
+  constructor(props: {app: App}) {
+    super(props);
+    this.state = {
+      rooms: [],
+      currentRoom: null,
+    };
+  }
+
+  componentDidMount() {
+    this.unlisten = this.props.app.listen((state: AppState) => {
+      this.setState(state);
+    });
+  }
+
+  componentWillUnmount() {
+    this.unlisten();
+  }
+
   render() {
     return (
       <div className="app">
-        {this.props.app.currentRoom ?
-         <RoomEl room={this.props.app.currentRoom} /> :
+        {this.state.currentRoom ?
+         <RoomEl room={this.state.currentRoom} /> :
          <div>No current room!</div>
         }
       </div>
@@ -25,16 +46,8 @@ extends React.Component<{room:Room}, undefined> {
         {this.props.room.messages.map((message) => {
           return <MessageEl key={key++} {...message} />;
         })}
-        <input id="message" type="text" />
-        <input type="button" value="Send" onClick={() => this.doClick()}/>
+        <InputEl onSubmit={(value) => this.props.room.sendMessage(value)} />
       </div>);
-  }
-
-  doClick() {
-    this.props.room.addMessage({
-      from: "mike",
-      when: 123,
-      message: this.refs.message.value});
   }
 }
 
@@ -44,6 +57,51 @@ export class MessageEl extends React.Component<Message, undefined> {
       <div className="message">
         {this.props.from}: {this.props.message}
       </div>
+    );
+  }
+}
+
+//
+// <InputEl /> - A generic text input field.
+//
+interface InputProps {
+  enterText?: string;
+  placeholder?: string;
+  onSubmit: (text: string) => void;
+}
+
+class InputEl extends React.Component<InputProps, {value: string}> {
+  constructor(props: InputProps) {
+    super(props);
+    this.state = {
+      value: ''
+    };
+  }
+
+  render() {
+    let self = this;
+
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+      self.setState({value: e.target.value});
+    }
+
+    function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+      e.preventDefault();
+      self.setState((prevState: {value: string}) => {
+        self.props.onSubmit(prevState.value);
+        return {
+          value: ''
+        };
+      });
+    }
+
+    return (
+      <form onSubmit={handleSubmit}>
+        <input placeholder={this.props.placeholder || ''}
+               onChange={handleChange}
+               value={this.state.value} />
+        <button>{this.props.enterText || 'OK'}</button>
+      </form>
     );
   }
 }
