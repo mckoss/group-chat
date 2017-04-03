@@ -39,13 +39,13 @@ export interface Message {
 //
 // Firebase datamodel
 //
-export interface RoomInfo {
+export interface RoomData {
   private: boolean;
   name: string;
 }
 
 type Role = 'owner' | 'applicant' | 'member' | 'banned' | '';
-export interface Member {
+export interface MemberData {
   nickname: string;
   role: Role;
 }
@@ -55,10 +55,10 @@ export interface Member {
 //
 export class AppOnFirebase implements App {
   state: AppState;
+  uid: string;
   listener: Listener<AppState>;
 
   private app: firebase.app.App;
-  private uid: string;
   private pendingUpdate = false;
 
   constructor() {
@@ -87,7 +87,7 @@ export class AppOnFirebase implements App {
 
       // Read and process each of the rooms.
       this.app.database().ref('rooms').on('child_added', (snapshot) => {
-        let info = snapshot!.val()! as RoomInfo;
+        let info = snapshot!.val()! as RoomData;
         let rid = snapshot!.key!;
 
         let room = this.findRoom(rid);
@@ -99,7 +99,7 @@ export class AppOnFirebase implements App {
 
         this.getMemberRef(rid)
           .once('value', (snapshot2) => {
-            let member = snapshot2.val() as Member;
+            let member = snapshot2.val() as MemberData;
             if (member) {
               room!.nickname = member.nickname;
               room!.role = member.role;
@@ -165,17 +165,18 @@ export class AppOnFirebase implements App {
     this.updateListeners();
   }
 
-  selectRoom(room: Room) {
-    if (room) {
+  selectRoom(room: RoomImpl) {
+    if (room && room !== this.state.currentRoom) {
       this.state.currentRoom = room;
+      room.listenForMessages();
       this.updateListeners();
     }
   }
 
-  findRoom(rid: string): Room | null {
+  findRoom(rid: string): RoomImpl | null {
     for (let room of this.state.rooms) {
       if (room.rid === rid) {
-        return room;
+        return room as RoomImpl;
       }
     }
     return null;
@@ -186,14 +187,14 @@ export class AppOnFirebase implements App {
 
     let ref = this.app.database().ref('rooms').push();
 
-    let roomInfo: RoomInfo = {
+    let roomInfo: RoomData = {
       private: true,
       name: name
     };
 
     ref.set(roomInfo)
       .then(() => {
-        let member: Member = {
+        let member: MemberData = {
           nickname: this.state.nickname,
           role: 'owner',
         };
@@ -209,8 +210,15 @@ export class AppOnFirebase implements App {
       .catch((error) => this.displayError(error));
   }
 
-  getMemberRef(rid: string): firebase.database.Reference {
-    return this.app.database().ref('members').child(rid).child(this.uid);
+  getMemberRef(rid: string, uid?: string): firebase.database.Reference {
+    if (!uid) {
+      uid = this.uid;
+    }
+    return this.app.database().ref('members').child(rid).child(uid);
+  }
+
+  getMessagesRef(rid: string): firebase.database.Reference {
+    return this.app.database().ref('messages').child(rid);
   }
 
   ensureSignedIn(reason: string) {
@@ -232,10 +240,14 @@ export class RoomImpl implements Room {
   role: string;
   nickname: string;
   messages: Message[] = [];
+  hasMessage: {[rid: string]: boolean} = {};
+  nicknameOf: {[uid: string]: string} = {};
+
+  private messageQuery: firebase.database.Query;
 
   constructor(private app: AppOnFirebase,
               rid: string,
-              info: RoomInfo) {
+              info: RoomData) {
     this.name = info.name;
     this.rid = rid;
     this.role = '';
@@ -243,11 +255,54 @@ export class RoomImpl implements Room {
   }
 
   sendMessage(message: string) {
-    this.messages.push({
-      from: this.app.state.nickname,
-      when: Date.now(),
-      message: message
+    this.app.ensureSignedIn('send a message');
+
+    this.app.getMessagesRef(this.rid)
+      .push({
+        from: this.app.uid,
+        when: firebase.database.ServerValue.TIMESTAMP,
+        message: message
+      });
+  }
+
+  listenForMessages() {
+    if (this.messageQuery) {
+      return;
+    }
+    // TODO(koss): Garbage collect message listener?
+    this.messageQuery = this.app.getMessagesRef(this.rid).orderByKey();
+    this.messageQuery.on('child_added', (snapshot) => {
+      let message = snapshot!.val() as Message;
+      console.log("message key", snapshot!.key!);
+      this.ensureMessage(snapshot!.key!, message);
     });
-    this.app.updateListeners();
+  }
+
+  ensureMessage(mid: string, message: Message) {
+    if (this.hasMessage[mid]) {
+      return;
+    }
+    let storedMessage = this.addMessage(mid, message);
+    if (this.nicknameOf[message.from]) {
+      // Re-write the from field to be the user's nickname.
+      storedMessage.from = this.nicknameOf[message.from];
+      this.app.updateListeners();
+    } else {
+      this.app.getMemberRef(this.rid, message.from).once('value', (snapshot) => {
+        let member = snapshot.val() as MemberData;
+        console.log("lookup of uid", mid, message.from, member.nickname);
+
+        this.nicknameOf[message.from] = member.nickname;
+        message.from = member.nickname;
+        storedMessage.from = member.nickname;
+        this.app.updateListeners();
+      });
+    }
+  }
+
+  addMessage(mid: string, message: Message): Message {
+    this.messages.push(message);
+    this.hasMessage[mid] = true;
+    return this.messages.slice(-1)[0];
   }
 }

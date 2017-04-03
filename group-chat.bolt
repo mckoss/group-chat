@@ -68,11 +68,16 @@ type Message {
   when: Number;
   message: String;
 
-  validate() { this.when == now }
+  validate() { this.when == now && isCurrentUser(this.from) }
 }
 
 path /messages/{rid} {
   read() { isRoomPublic(rid) || isRoomMember(rid) }
+}
+
+path /messages/{rid}/{mid} is Message {
+  validate() { isPushID(mid) }
+
   create() { isRoomMember(rid) }
   delete() { isRoomOwner(rid) }
 }
