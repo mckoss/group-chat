@@ -14,6 +14,7 @@ export interface App extends Listenable<AppState> {
   createRoom: (name: string) => Room;
   selectRoom: (room: Room) => void;
   setNickname: (name: string) => void;
+  signIn: () => Promise<void>;
 }
 
 export interface Room {
@@ -36,7 +37,8 @@ export class AppOnFirebase implements App {
   state: AppState;
   listener: Listener<AppState>;
 
-  private fbApp: firebase.app.App;
+  private app: firebase.app.App;
+  private uid: string;
   private pendingUpdate = false;
 
   constructor() {
@@ -44,7 +46,14 @@ export class AppOnFirebase implements App {
     if (typeof firebase === 'undefined') {
       console.error("Firebase script not loaded - offline?");
     } else {
-      this.fbApp = firebase.initializeApp(config);
+      this.app = firebase.initializeApp(config);
+      this.app.auth().onAuthStateChanged((user: firebase.User) => {
+        console.log("user", user);
+        this.uid = user.uid;
+        if (user.displayName) {
+          this.setNickname(user.displayName);
+        }
+      });
     }
     this.state = {
       nickname: 'anonymous',
@@ -53,6 +62,7 @@ export class AppOnFirebase implements App {
     };
   }
 
+  // TODO(koss): Allow more than one listener.
   listen(listener: Listener<AppState>): Unlisten {
     this.listener = listener;
     this.updateListeners();
@@ -73,6 +83,15 @@ export class AppOnFirebase implements App {
           this.listener(this.state);
         }
       });
+  }
+
+  signIn(): Promise<void> {
+    let provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('profile');
+    provider.addScope('email');
+    provider.addScope('https://www.googleapis.com/auth/plus.login');
+      // signInWithPopup does not work on mobile devices
+    return this.app.auth().signInWithRedirect(provider) as Promise<void>;
   }
 
   setNickname(name: string) {

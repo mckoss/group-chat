@@ -33,6 +33,9 @@ export class AppEl extends React.Component<{app: App}, AppState> {
         <div>Nickname: {this.state.nickname}</div>
         <InputEl onSubmit={(value) => this.props.app.setNickname(value)}
                  placeholder="Set nickname ..." />
+        <input type="button"
+               onClick={() => this.props.app.signIn()}
+               value="SignIn" />
         <h2>Rooms:</h2>
         <ul className="room-list">
           {this.state.rooms.map((room) => {
