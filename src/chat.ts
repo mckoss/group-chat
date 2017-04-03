@@ -8,10 +8,12 @@ export interface AppState {
   nickname: string;
   rooms: Room[];
   currentRoom: Room | null;
+  latestError: string;
 }
 
 export interface App extends Listenable<AppState> {
-  createRoom: (name: string) => Room;
+  getState: () => AppState;
+  createRoom: (name: string) => void;
   selectRoom: (room: Room) => void;
   setNickname: (name: string) => void;
   signIn: () => Promise<void>;
@@ -20,6 +22,8 @@ export interface App extends Listenable<AppState> {
 
 export interface Room {
   name: string;
+  rid: string;
+  role: string;
   messages: Message[];
 
   sendMessage: (message: string) => void;
@@ -30,6 +34,14 @@ export interface Message {
   when: number;
   message: string;
 };
+
+//
+// Firebase datamodel
+//
+export interface RoomInfo {
+  private: boolean;
+  name: string;
+}
 
 //
 // Implementation of Application using Firebase.
@@ -48,6 +60,7 @@ export class AppOnFirebase implements App {
       console.error("Firebase script not loaded - offline?");
     } else {
       this.app = firebase.initializeApp(config);
+
       this.app.auth().onAuthStateChanged((user: firebase.User | null) => {
         if (user === null) {
           delete this.uid;
@@ -59,11 +72,32 @@ export class AppOnFirebase implements App {
           this.setNickname(user.displayName);
         }
       });
+
+      // TODO(koss): Use child_added instead.
+      this.app.database().ref('rooms').on('value', (snapshot) => {
+        if (!snapshot) {
+          return;
+        }
+        let rooms = snapshot.val() as {[rid: string]: RoomInfo};
+
+        if (!rooms) {
+          this.state.rooms = [];
+          return;
+        }
+
+        this.state.rooms = Object.keys(rooms).map((rid) => {
+          return new RoomImpl(this, rid, rooms[rid]);
+        });
+        // TODO(koss): Update role from /members list.
+        this.updateListeners();
+      });
+
     }
     this.state = {
       nickname: 'anonymous',
       rooms: [],
       currentRoom: null,
+      latestError: ''
     };
   }
 
@@ -76,6 +110,10 @@ export class AppOnFirebase implements App {
     });
   }
 
+  getState(): AppState {
+    return Object.assign({}, this.state);
+  }
+
   updateListeners() {
     if (this.pendingUpdate) {
       return;
@@ -85,7 +123,7 @@ export class AppOnFirebase implements App {
       .then(() => {
         this.pendingUpdate = false;
         if (this.listener) {
-          this.listener(this.state);
+          this.listener(this.getState());
         }
       });
   }
@@ -109,28 +147,62 @@ export class AppOnFirebase implements App {
   }
 
   selectRoom(room: Room) {
-    console.log('select', room.name);
-    this.state.currentRoom = room;
-    this.updateListeners();
+    console.log('selectRoom', room);
+
+    if (room) {
+      this.state.currentRoom = room;
+      this.updateListeners();
+    }
   }
 
-  createRoom(name: string): Room {
-    let room = new RoomImpl(this, name);
+  findRoom(rid: string): Room | null {
+    for (let room of this.state.rooms) {
+      if (room.rid === rid) {
+        return room;
+      }
+    }
+    return null;
+  }
 
-    this.state.rooms.push(room);
-    this.state.currentRoom = room;
+  createRoom(name: string) {
+    let ref = this.app.database().ref('rooms').push();
 
+    let roomInfo: RoomInfo = {
+      private: true,
+      name: name
+    };
+
+    ref.set(roomInfo)
+      .then(() => {
+        let room = this.findRoom(ref.key!);
+        if (!room) {
+          throw new Error("Can't select room: " + ref.key);
+        }
+        this.selectRoom(room);
+      })
+      .catch((error) => this.displayError(error));
+  }
+
+  displayError(error: Error) {
+    console.log(error);
+    this.state.latestError = error.message;
     this.updateListeners();
-
-    return room;
   }
 }
 
 export class RoomImpl implements Room {
+  name: string;
+  rid: string;
+  role: string;
   messages: Message[] = [];
 
   constructor(private app: AppOnFirebase,
-              public name: string) {/*_*/}
+              rid: string,
+              info: RoomInfo) {
+    this.name = info.name;
+    this.rid = rid;
+    this.role = 'unknown';
+  }
 
   sendMessage(message: string) {
     this.messages.push({

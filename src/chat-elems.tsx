@@ -10,11 +10,7 @@ export class AppEl extends React.Component<{app: App}, AppState> {
 
   constructor(props: {app: App}) {
     super(props);
-    this.state = {
-      nickname: '',
-      rooms: [],
-      currentRoom: null,
-    };
+    this.state = props.app.getState();
   }
 
   componentDidMount() {
