@@ -192,6 +192,7 @@ export class AppOnFirebase implements App {
   selectRoom(room: RoomImpl) {
     if (room && room !== this.state.currentRoom) {
       this.state.currentRoom = room;
+      room.ensureMember();
       room.listenForMessages();
       this.updateListeners();
     }
@@ -212,7 +213,7 @@ export class AppOnFirebase implements App {
     let ref = this.app.database().ref('rooms').push();
 
     let roomInfo: RoomData = {
-      private: true,
+      private: false,
       name: name
     };
 
@@ -289,6 +290,18 @@ export class RoomImpl implements Room {
     this.rid = rid;
     this.role = '';
     this.nickname = app.state.nickname;
+  }
+
+  ensureMember() {
+    let memberRef = this.app.getMemberRef(this.rid);
+    // TODO(koss): Read first, and then try 'member' or 'applicant'.
+    if (this.role === '') {
+      let member: MemberData = {
+        nickname: this.app.state.nickname,
+        role: 'member',
+      };
+      this.app.getMemberRef(this.rid).set(member);
+    }
   }
 
   sendMessage(message: string) {
