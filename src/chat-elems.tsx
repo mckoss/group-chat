@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { Unlisten } from './listen';
 import { App, AppState, Room, Message } from './chat';
+import { Age } from './format';
 
 export class AppEl extends React.Component<{app: App}, AppState> {
   unlisten: Unlisten;
@@ -73,7 +74,10 @@ export class MessageEl extends React.Component<Message, undefined> {
   render() {
     return (
       <div className="message">
-        {this.props.from}: {this.props.message}
+        <span className="user">{this.props.from}</span>: {this.props.message}
+        <div className="when">
+          <Age timestamp={this.props.when} />
+        </div>
       </div>
     );
   }

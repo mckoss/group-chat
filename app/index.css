@@ -41,3 +41,19 @@ span.menu-bar {
 .room-list li.selected {
   font-weight: bold;
 }
+
+/* Room chat */
+.message {
+  background: white;
+  padding: 5px;
+  margin-bottom: 5px;
+}
+
+.message .user {
+  color: red;
+}
+
+.message .when {
+  text-align: right;
+  color: gray;
+}
