@@ -22,9 +22,9 @@ export interface App extends Listenable<AppState> {
 
 export interface Room {
   name: string;
-  // TODO(koss): Add room-specific nickname.
   rid: string;
   role: string;
+  nickname: string;
   messages: Message[];
 
   sendMessage: (message: string) => void;
@@ -97,7 +97,17 @@ export class AppOnFirebase implements App {
           this.state.rooms.push(room);
         };
 
-        // TODO(koss): Update role from /members list.
+        this.getMemberRef(rid)
+          .once('value', (snapshot2) => {
+            let member = snapshot2.val() as Member;
+            if (member) {
+              room!.nickname = member.nickname;
+              room!.role = member.role;
+              this.updateListeners();
+            }
+          })
+          .catch((e) => this.displayError(e));
+
         this.updateListeners();
       });
     }
@@ -187,10 +197,7 @@ export class AppOnFirebase implements App {
           nickname: this.state.nickname,
           role: 'owner',
         };
-        return this.app.database().ref('members')
-          .child(ref.key!)
-          .child(this.uid)
-          .set(member);
+        return this.getMemberRef(ref.key!).set(member);
       })
       .then(() => {
         let room = this.findRoom(ref.key!);
@@ -200,6 +207,10 @@ export class AppOnFirebase implements App {
         this.selectRoom(room);
       })
       .catch((error) => this.displayError(error));
+  }
+
+  getMemberRef(rid: string): firebase.database.Reference {
+    return this.app.database().ref('members').child(rid).child(this.uid);
   }
 
   ensureSignedIn(reason: string) {
@@ -219,6 +230,7 @@ export class RoomImpl implements Room {
   name: string;
   rid: string;
   role: string;
+  nickname: string;
   messages: Message[] = [];
 
   constructor(private app: AppOnFirebase,
@@ -227,6 +239,7 @@ export class RoomImpl implements Room {
     this.name = info.name;
     this.rid = rid;
     this.role = '';
+    this.nickname = app.state.nickname;
   }
 
   sendMessage(message: string) {
