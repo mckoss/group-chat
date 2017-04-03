@@ -44,7 +44,7 @@ export interface RoomInfo {
   name: string;
 }
 
-type Role = 'unknown' | 'owner' | 'applicant' | 'member' | 'banned';
+type Role = 'owner' | 'applicant' | 'member' | 'banned' | '';
 export interface Member {
   nickname: string;
   role: Role;
@@ -85,26 +85,23 @@ export class AppOnFirebase implements App {
         }
       });
 
-      // TODO(koss): Use child_added instead.
-      this.app.database().ref('rooms').on('value', (snapshot) => {
-        if (!snapshot) {
-          return;
-        }
-        let rooms = snapshot.val() as {[rid: string]: RoomInfo};
+      // Read and process each of the rooms.
+      this.app.database().ref('rooms').on('child_added', (snapshot) => {
+        let info = snapshot!.val()! as RoomInfo;
+        let rid = snapshot!.key!;
 
-        if (!rooms) {
-          this.state.rooms = [];
-          return;
-        }
+        let room = this.findRoom(rid);
 
-        this.state.rooms = Object.keys(rooms).map((rid) => {
-          return new RoomImpl(this, rid, rooms[rid]);
-        });
+        if (room === null) {
+          room = new RoomImpl(this, rid, info);
+          this.state.rooms.push(room);
+        };
+
         // TODO(koss): Update role from /members list.
         this.updateListeners();
       });
-
     }
+
     this.state = {
       nickname: 'anonymous',
       rooms: [],
@@ -229,7 +226,7 @@ export class RoomImpl implements Room {
               info: RoomInfo) {
     this.name = info.name;
     this.rid = rid;
-    this.role = 'unknown';
+    this.role = '';
   }
 
   sendMessage(message: string) {

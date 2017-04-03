@@ -41,7 +41,7 @@ export class AppEl extends React.Component<{app: App}, AppState> {
             return (<li key={room.rid}
                     className={this.state.currentRoom === room ? 'selected' : ''}
                         onClick={() => this.props.app.selectRoom(room)}>
-                      {room.name} ({room.role})
+                      {room.name} {room.role === '' ? '' : '(' + room.role + ')'}
                     </li>);
           })}
         </ul>
