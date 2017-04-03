@@ -22,6 +22,7 @@ export interface App extends Listenable<AppState> {
 
 export interface Room {
   name: string;
+  // TODO(koss): Add room-specific nickname.
   rid: string;
   role: string;
   messages: Message[];
@@ -43,6 +44,12 @@ export interface RoomInfo {
   name: string;
 }
 
+type Role = 'unknown' | 'owner' | 'applicant' | 'member' | 'banned';
+export interface Member {
+  nickname: string;
+  role: Role;
+}
+
 //
 // Implementation of Application using Firebase.
 //
@@ -56,6 +63,11 @@ export class AppOnFirebase implements App {
 
   constructor() {
     console.log("Application startup ...");
+
+    window.addEventListener('error', (e) => {
+      this.displayError(e as any as Error);
+    });
+
     if (typeof firebase === 'undefined') {
       console.error("Firebase script not loaded - offline?");
     } else {
@@ -147,8 +159,6 @@ export class AppOnFirebase implements App {
   }
 
   selectRoom(room: Room) {
-    console.log('selectRoom', room);
-
     if (room) {
       this.state.currentRoom = room;
       this.updateListeners();
@@ -165,6 +175,8 @@ export class AppOnFirebase implements App {
   }
 
   createRoom(name: string) {
+    this.ensureSignedIn("create a room");
+
     let ref = this.app.database().ref('rooms').push();
 
     let roomInfo: RoomInfo = {
@@ -174,6 +186,16 @@ export class AppOnFirebase implements App {
 
     ref.set(roomInfo)
       .then(() => {
+        let member: Member = {
+          nickname: this.state.nickname,
+          role: 'owner',
+        };
+        return this.app.database().ref('members')
+          .child(ref.key!)
+          .child(this.uid)
+          .set(member);
+      })
+      .then(() => {
         let room = this.findRoom(ref.key!);
         if (!room) {
           throw new Error("Can't select room: " + ref.key);
@@ -181,6 +203,12 @@ export class AppOnFirebase implements App {
         this.selectRoom(room);
       })
       .catch((error) => this.displayError(error));
+  }
+
+  ensureSignedIn(reason: string) {
+    if (!this.uid) {
+      throw new Error("Must be siged in to " + reason + ".");
+    }
   }
 
   displayError(error: Error) {

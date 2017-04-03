@@ -38,10 +38,10 @@ export class AppEl extends React.Component<{app: App}, AppState> {
         <h2>Rooms:</h2>
         <ul className="room-list">
           {this.state.rooms.map((room) => {
-            return (<li key={room.name}
+            return (<li key={room.rid}
                     className={this.state.currentRoom === room ? 'selected' : ''}
                         onClick={() => this.props.app.selectRoom(room)}>
-                      {room.name}
+                      {room.name} ({room.role})
                     </li>);
           })}
         </ul>
