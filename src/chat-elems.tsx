@@ -126,7 +126,7 @@ class InputEl extends React.Component<InputProps, {value: string}> {
                onChange={handleChange}
                value={this.state.value} />
         &nbsp;
-        <button>{this.props.enterText || 'OK'}</button>
+        <input type="button" value={this.props.enterText || 'OK'} />
       </form>
     );
   }
