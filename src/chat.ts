@@ -15,6 +15,7 @@ export interface App extends Listenable<AppState> {
   selectRoom: (room: Room) => void;
   setNickname: (name: string) => void;
   signIn: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 export interface Room {
@@ -47,8 +48,12 @@ export class AppOnFirebase implements App {
       console.error("Firebase script not loaded - offline?");
     } else {
       this.app = firebase.initializeApp(config);
-      this.app.auth().onAuthStateChanged((user: firebase.User) => {
-        console.log("user", user);
+      this.app.auth().onAuthStateChanged((user: firebase.User | null) => {
+        if (user === null) {
+          delete this.uid;
+          this.setNickname('anonymous');
+          return;
+        }
         this.uid = user.uid;
         if (user.displayName) {
           this.setNickname(user.displayName);
@@ -92,6 +97,10 @@ export class AppOnFirebase implements App {
     provider.addScope('https://www.googleapis.com/auth/plus.login');
       // signInWithPopup does not work on mobile devices
     return this.app.auth().signInWithRedirect(provider) as Promise<void>;
+  }
+
+  signOut(): Promise<void> {
+    return this.app.auth().signOut() as Promise<void>;
   }
 
   setNickname(name: string) {
