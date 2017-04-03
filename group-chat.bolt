@@ -1,11 +1,87 @@
-path /users/{uid} is User {
-  read() { isUser(uid) }
-  create() { isUser(uid) }
-  update() { isUser(uid) }
+//
+// Authentication
+//
+type UID extends String {
+  validate() { this.length >= 20 }
 }
 
-type User {
-  nickname: String;
+function isCurrentUser(uid) { auth != null && auth.uid == uid }
+
+//
+// Chat Room Info
+//
+type RoomInfo {
+  private: Boolean;
+  name: String;
 }
 
-function isUser(uid) { auth != null && auth.uid == uid }
+path /rooms {
+  read() { true }
+}
+
+path /rooms/{rid} is RoomInfo {
+  create() { auth != null }
+  update() { getRoomRole(rid) == 'owner' }
+}
+
+function getRoomInfo(rid) { prior(root).rooms[rid] }
+
+//
+// Room Membership
+//
+type Member {
+  nickname: Nickname;
+  role: Role;
+}
+
+type Role extends String {
+  validate() { this.test(/^owner|applicant|member|banned$/) }
+}
+
+path /members/{rid} {
+  read() { isRoomOwner(rid) }
+  create() { getRoomInfo(rid) != null }
+}
+
+path /members/{rid}/{uid} is Member {
+  read() { isCurrentUser(uid) }
+  create() {
+    getRoomInfo(rid) != null && isCurrentUser(uid) && (
+      getRoomInfo(rid).private == false && this.role == 'member' ||
+      this.role == 'applicant'
+    )
+  }
+  update() { isRoomOwner(rid) }
+}
+
+function isRoomOwner(rid) {
+  getRoomRole(rid) == 'owner'
+}
+
+function getRoomRole(rid) { prior(root).members[rid][auth.uid].role }
+
+type Nickname extends String {
+  validate() { this.length >= 3 }
+}
+
+//
+// Messages
+//
+type Message {
+  from: UID;
+  when: Number;
+  message: String;
+
+  validate() { this.when == now }
+}
+
+path /messages/{rid} {
+  read() { canRead(rid) }
+  create() { getRoomRole(rid) }
+}
+
+function canRead(rid) { getRoomRole(rid).test(/^owner|member$/) }
+
+type PushID extends String {
+  validate() { this.length == 20 }
+}
