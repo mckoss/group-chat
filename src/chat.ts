@@ -5,13 +5,15 @@ import { Listen, Listenable, Listener, Unlisten } from './listen';
 // The <App> UI is bound to a property which implements this interface.
 //
 export interface AppState {
+  nickname: string;
   rooms: Room[];
   currentRoom: Room | null;
 }
 
 export interface App extends Listenable<AppState> {
-  createRoom: ((name: string) => Room);
+  createRoom: (name: string) => Room;
   selectRoom: (room: Room) => void;
+  setNickname: (name: string) => void;
 }
 
 export interface Room {
@@ -32,7 +34,6 @@ export interface Message {
 //
 export class AppOnFirebase implements App {
   state: AppState;
-  uid: string;
   listener: Listener<AppState>;
 
   private fbApp: firebase.app.App;
@@ -45,10 +46,10 @@ export class AppOnFirebase implements App {
     } else {
       this.fbApp = firebase.initializeApp(config);
     }
-    this.uid = 'mike';
     this.state = {
+      nickname: 'anonymous',
       rooms: [],
-      currentRoom: null
+      currentRoom: null,
     };
   }
 
@@ -72,6 +73,11 @@ export class AppOnFirebase implements App {
           this.listener(this.state);
         }
       });
+  }
+
+  setNickname(name: string) {
+    this.state.nickname = name;
+    this.updateListeners();
   }
 
   selectRoom(room: Room) {
@@ -100,7 +106,7 @@ export class RoomImpl implements Room {
 
   sendMessage(message: string) {
     this.messages.push({
-      from: this.app.uid,
+      from: this.app.state.nickname,
       when: Date.now(),
       message: message
     });

@@ -10,6 +10,7 @@ export class AppEl extends React.Component<{app: App}, AppState> {
   constructor(props: {app: App}) {
     super(props);
     this.state = {
+      nickname: '',
       rooms: [],
       currentRoom: null,
     };
@@ -28,6 +29,9 @@ export class AppEl extends React.Component<{app: App}, AppState> {
   render() {
     return (
       <div className="app">
+        <div>Nickname: {this.state.nickname}</div>
+        <InputEl onSubmit={(value) => this.props.app.setNickname(value)}
+                 placeholder="Set nickname ..." />
         <h2>Rooms:</h2>
         <ul className="room-list">
           {this.state.rooms.map((room) => {
@@ -126,7 +130,7 @@ class InputEl extends React.Component<InputProps, {value: string}> {
                onChange={handleChange}
                value={this.state.value} />
         &nbsp;
-        <input type="button" value={this.props.enterText || 'OK'} />
+        <input type="submit" value={this.props.enterText || 'OK'} />
       </form>
     );
   }
