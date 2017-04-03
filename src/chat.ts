@@ -15,6 +15,7 @@ export interface App extends Listenable<AppState> {
   getState: () => AppState;
   createRoom: (name: string) => void;
   selectRoom: (room: Room) => void;
+  deleteRoom: (room: Room) => void;
   setNickname: (name: string) => void;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -97,6 +98,7 @@ export class AppOnFirebase implements App {
           this.state.rooms.push(room);
         };
 
+        // TODO(koss): Bug when not signed in.
         this.getMemberRef(rid)
           .once('value', (snapshot2) => {
             let member = snapshot2.val() as MemberData;
@@ -109,6 +111,28 @@ export class AppOnFirebase implements App {
           .catch((e) => this.displayError(e));
 
         this.updateListeners();
+      });
+
+      // Watch for complete removal of a room.
+      this.app.database().ref('rooms').on('child_removed', (snapshot) => {
+        let room = this.findRoom(snapshot!.key!);
+        if (room) {
+          console.log("Room was removed: ", room);
+
+          // TODO(koss): Bug when deleting room, messages are selected?
+          if (this.state.currentRoom === room) {
+            this.state.currentRoom = null;
+          }
+
+          for (let i = 0; i < this.state.rooms.length; i++) {
+            if (this.state.rooms[i] === room) {
+              this.state.rooms.splice(i, 1);
+              return;
+            }
+          }
+
+          this.updateListeners();
+        }
       });
     }
 
@@ -210,6 +234,19 @@ export class AppOnFirebase implements App {
       .catch((error) => this.displayError(error));
   }
 
+  deleteRoom(room: RoomImpl) {
+    // May fail if there are no messages - ignore.
+    this.getMessagesRef(room.rid).set(null);
+
+    this.app.database().ref('rooms').child(room.rid).set(null)
+      .then(() => {
+        this.app.database().ref('members').child(room.rid).set(null);
+      })
+      .catch((e) => {
+        this.displayError(e);
+      });
+  }
+
   getMemberRef(rid: string, uid?: string): firebase.database.Reference {
     if (!uid) {
       uid = this.uid;
@@ -273,7 +310,6 @@ export class RoomImpl implements Room {
     this.messageQuery = this.app.getMessagesRef(this.rid).orderByKey();
     this.messageQuery.on('child_added', (snapshot) => {
       let message = snapshot!.val() as Message;
-      console.log("message key", snapshot!.key!);
       this.ensureMessage(snapshot!.key!, message);
     });
   }
@@ -290,7 +326,6 @@ export class RoomImpl implements Room {
     } else {
       this.app.getMemberRef(this.rid, message.from).once('value', (snapshot) => {
         let member = snapshot.val() as MemberData;
-        console.log("lookup of uid", mid, message.from, member.nickname);
 
         this.nicknameOf[message.from] = member.nickname;
         message.from = member.nickname;

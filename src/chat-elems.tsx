@@ -26,6 +26,8 @@ export class AppEl extends React.Component<{app: App}, AppState> {
   render() {
     return (
       <div className="app">
+        {this.state.latestError !== '' ?
+          <div id="error">{this.state.latestError}</div> : ''}
         <div>Nickname: {this.state.nickname}</div>
         <InputEl onSubmit={(value) => this.props.app.setNickname(value)}
                  placeholder="Set nickname ..." />
@@ -41,7 +43,12 @@ export class AppEl extends React.Component<{app: App}, AppState> {
             return (<li key={room.rid}
                     className={this.state.currentRoom === room ? 'selected' : ''}
                         onClick={() => this.props.app.selectRoom(room)}>
-                      {room.name} {room.role === '' ? '' : '(' + room.role + ')'}
+                      {room.name}
+                      {room.role === '' ? '' : ' (' + room.role + ')'}
+                      {room.role === 'owner' ?
+                        <input type="button"
+                               onClick={() => this.props.app.deleteRoom(room)}
+                               value="Delete" /> : ''}
                     </li>);
           })}
         </ul>

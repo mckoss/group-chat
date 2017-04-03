@@ -23,14 +23,14 @@ li { line-height: 120%; margin-bottom: 8px; }
   width: 100%;
 }
 
-span.menu-bar {
-  position: absolute;
-  display: block;
-  bottom: 3px;
-  right: 0;
-  color: gray;
-  font-size: 0.5em;
-  text-align: right;
+#error {
+  background: yellow;
+  color: red;
+}
+
+input[type=button], input[type=submit] {
+  font-size: 100%;
+  margin-left: 5px;
 }
 
 /* Room List */

@@ -14,6 +14,7 @@ path /rooms/{rid} is RoomInfo {
   validate() { isPushID(rid) }
   create() { auth != null }
   update() { getRoomRole(rid) == 'owner' }
+  delete() { isRoomOwner(rid) }
 }
 
 function getRoomInfo(rid) { prior(root).rooms[rid] }
@@ -36,6 +37,7 @@ path /members/{rid} {
   validate() { isPushID(rid) }
   read() { isRoomOwner(rid) }
   create() { getRoomInfo(rid) != null }
+  delete() { isRoomOwner(rid) }
 }
 
 path /members/{rid}/{uid} is Member {
@@ -73,6 +75,7 @@ type Message {
 
 path /messages/{rid} {
   read() { isRoomPublic(rid) || isRoomMember(rid) }
+  delete() { isRoomOwner(rid) }
 }
 
 path /messages/{rid}/{mid} is Message {
