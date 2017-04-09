@@ -15,7 +15,7 @@ export class AppEl extends React.Component<{app: App}, AppState> {
 
   componentDidMount() {
     this.unlisten = this.props.app.listen((state: AppState) => {
-      this.setState(state);
+      this.setState(state || {});
     });
   }
 

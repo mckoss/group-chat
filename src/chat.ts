@@ -1,6 +1,6 @@
 import { config } from './config';
 import { Listen, Listenable, Listener, Unlisten } from './listen';
-import { Variable } from './variable';
+import { Variable, Emit } from './variable';
 
 //
 // The <App> UI is bound to a property which implements this interface.
@@ -60,9 +60,11 @@ export class AppOnFirebase implements App {
   uid: string;
   userListenable: Listenable<firebase.User | null>;
   listener: Listener<AppState>;
+  listen: Listen<AppState>;
 
   private app: firebase.app.App;
   private pendingUpdate = false;
+  private emitState: Emit<AppState>;
 
   constructor() {
     console.log("Application startup ...");
@@ -78,6 +80,11 @@ export class AppOnFirebase implements App {
 
     this.app = firebase.initializeApp(config);
 
+    let listenable = new Variable<AppState>((emit) => {
+      this.emitState = emit;
+    });
+    this.listen = (fn) => listenable.listen(fn);
+
     this.userListenable = new Variable<firebase.User | null>((emit) => {
       this.app.auth().onAuthStateChanged((user: firebase.User | null) => {
         emit(user);
@@ -85,7 +92,7 @@ export class AppOnFirebase implements App {
     });
 
     this.userListenable.listen((user) => {
-      if (user === null) {
+      if (!user) {
         delete this.uid;
         this.setNickname('anonymous');
         return;
@@ -142,15 +149,6 @@ export class AppOnFirebase implements App {
     };
   }
 
-  // TODO(koss): Allow more than one listener.
-  listen(listener: Listener<AppState>): Unlisten {
-    this.listener = listener;
-    this.updateListeners();
-    return (() => {
-      delete this.listener;
-    });
-  }
-
   getState(): AppState {
     return Object.assign({}, this.state);
   }
@@ -163,9 +161,7 @@ export class AppOnFirebase implements App {
     Promise.resolve()
       .then(() => {
         this.pendingUpdate = false;
-        if (this.listener) {
-          this.listener(this.getState());
-        }
+        this.emitState(this.getState());
       });
   }
 
@@ -290,7 +286,7 @@ export class RoomImpl implements Room {
 
     // Update the room when the user changes.
     this.app.userListenable.listen((user) => {
-      if (user === null) {
+      if (!user) {
         this.setUnknownMembership();
         this.app.updateListeners();
         return;
