@@ -1,5 +1,6 @@
 import { config } from './config';
 import { Listen, Listenable, Listener, Unlisten } from './listen';
+import { Variable } from './variable';
 
 //
 // The <App> UI is bound to a property which implements this interface.
@@ -57,6 +58,7 @@ export interface MemberData {
 export class AppOnFirebase implements App {
   state: AppState;
   uid: string;
+  userListenable: Listenable<firebase.User | null>;
   listener: Listener<AppState>;
 
   private app: firebase.app.App;
@@ -71,70 +73,66 @@ export class AppOnFirebase implements App {
 
     if (typeof firebase === 'undefined') {
       console.error("Firebase script not loaded - offline?");
-    } else {
-      this.app = firebase.initializeApp(config);
+      return;
+    }
 
+    this.app = firebase.initializeApp(config);
+
+    this.userListenable = new Variable<firebase.User | null>((emit) => {
       this.app.auth().onAuthStateChanged((user: firebase.User | null) => {
-        if (user === null) {
-          delete this.uid;
-          this.setNickname('anonymous');
-          return;
-        }
-        this.uid = user.uid;
-        if (user.displayName) {
-          this.setNickname(user.displayName);
-        }
+        emit(user);
       });
+    });
 
-      // Read and process each of the rooms.
-      this.app.database().ref('rooms').on('child_added', (snapshot) => {
-        let info = snapshot!.val()! as RoomData;
-        let rid = snapshot!.key!;
+    this.userListenable.listen((user) => {
+      if (user === null) {
+        delete this.uid;
+        this.setNickname('anonymous');
+        return;
+      }
 
-        let room = this.findRoom(rid);
+      this.uid = user.uid;
+      if (user.displayName) {
+        this.setNickname(user.displayName);
+      }
+    });
 
-        if (room === null) {
-          room = new RoomImpl(this, rid, info);
-          this.state.rooms.push(room);
-        };
+    // Read and process each of the rooms.
+    this.app.database().ref('rooms').on('child_added', (snapshot) => {
+      let info = snapshot!.val()! as RoomData;
+      let rid = snapshot!.key!;
 
-        // TODO(koss): Bug when not signed in.
-        this.getMemberRef(rid)
-          .once('value', (snapshot2) => {
-            let member = snapshot2.val() as MemberData;
-            if (member) {
-              room!.nickname = member.nickname;
-              room!.role = member.role;
-              this.updateListeners();
-            }
-          })
-          .catch((e) => this.displayError(e));
+      let room = this.findRoom(rid);
+
+      if (room === null) {
+        room = new RoomImpl(this, rid, info);
+        this.state.rooms.push(room);
+      };
+
+      this.updateListeners();
+    });
+
+    // Watch for complete removal of a room.
+    this.app.database().ref('rooms').on('child_removed', (snapshot) => {
+      let room = this.findRoom(snapshot!.key!);
+      if (room) {
+        console.log("Room was removed: ", room);
+
+        // TODO(koss): Bug when deleting room, messages are selected?
+        if (this.state.currentRoom === room) {
+          this.state.currentRoom = null;
+        }
+
+        for (let i = 0; i < this.state.rooms.length; i++) {
+          if (this.state.rooms[i] === room) {
+            this.state.rooms.splice(i, 1);
+            return;
+          }
+        }
 
         this.updateListeners();
-      });
-
-      // Watch for complete removal of a room.
-      this.app.database().ref('rooms').on('child_removed', (snapshot) => {
-        let room = this.findRoom(snapshot!.key!);
-        if (room) {
-          console.log("Room was removed: ", room);
-
-          // TODO(koss): Bug when deleting room, messages are selected?
-          if (this.state.currentRoom === room) {
-            this.state.currentRoom = null;
-          }
-
-          for (let i = 0; i < this.state.rooms.length; i++) {
-            if (this.state.rooms[i] === room) {
-              this.state.rooms.splice(i, 1);
-              return;
-            }
-          }
-
-          this.updateListeners();
-        }
-      });
-    }
+      }
+    });
 
     this.state = {
       nickname: 'anonymous',
@@ -288,12 +286,37 @@ export class RoomImpl implements Room {
               info: RoomData) {
     this.name = info.name;
     this.rid = rid;
+    this.setUnknownMembership();
+
+    // Update the room when the user changes.
+    this.app.userListenable.listen((user) => {
+      if (user === null) {
+        this.setUnknownMembership();
+        this.app.updateListeners();
+        return;
+      }
+
+      this.app.getMemberRef(this.rid, user.uid)
+        .once('value', (snapshot) => {
+          let member = snapshot.val() as MemberData;
+          if (member) {
+            this.role = member.role;
+            this.nickname = member.nickname;
+          } else {
+            this.setUnknownMembership();
+          }
+          this.app.updateListeners();
+        })
+        .catch((e) => this.app.displayError(e));
+    });
+  }
+
+  setUnknownMembership() {
     this.role = '';
-    this.nickname = app.state.nickname;
+    this.nickname = 'unknown';
   }
 
   ensureMember() {
-    let memberRef = this.app.getMemberRef(this.rid);
     // TODO(koss): Read first, and then try 'member' or 'applicant'.
     if (this.role === '') {
       let member: MemberData = {

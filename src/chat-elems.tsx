@@ -44,7 +44,8 @@ export class AppEl extends React.Component<{app: App}, AppState> {
                     className={this.state.currentRoom === room ? 'selected' : ''}
                         onClick={() => this.props.app.selectRoom(room)}>
                       {room.name}
-                      {room.role === '' ? '' : ' (' + room.role + ')'}
+                      {room.role === '' ? '' : ' (' + room.role +
+                                               ' as ' + room.nickname + ')'}
                       {room.role === 'owner' ?
                         <input type="button"
                                onClick={() => this.props.app.deleteRoom(room)}
